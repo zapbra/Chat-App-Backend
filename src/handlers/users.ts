@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { CustomError } from "../lib/custom-error";
-import { users } from "../db/schema";
+import { messages, users } from "../db/schema";
 import { db } from "../db/index";
 import { eq, or } from "drizzle-orm";
 import { RequestHandler } from "express";
@@ -9,40 +9,48 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 
 interface AuthPayload extends JwtPayload {
     email: string;
+    id: number;
 }
 
-export const refreshToken: RequestHandler = async (
+export const refreshToken: RequestHandler = (
     req: Request,
     res: Response,
     next: NextFunction
 ) => {
-    if (req.cookies?.jwt) {
-        // Destructuring refreshToken from cookie
-        const refreshToken = req.cookies.jwt;
-
-        jwt.verify(refreshToken, "secret", (err: any, decoded: any) => {
-            if (err) {
-                // Wrong Refesh Token
-                return res.status(406).json({ message: "Unauthorized" });
-            } else {
-                // Correct token we send a new access token
-                const accessToken = jwt.sign(
-                    {
-                        email: req.user!.email,
-                    },
-                    "secret",
-                    {
-                        expiresIn: "1H",
-                    }
-                );
-                res.json({ accessToken });
-                return;
-            }
-        });
-    } else {
+    console.log("called refresh token function");
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer")) {
+        console.log("bad auth header");
         res.status(406).json({ message: "Unauthorized" });
         return;
     }
+
+    const refreshToken = authHeader.split(" ")[1];
+
+    jwt.verify(refreshToken, "secret", (err: any, decoded: any) => {
+        if (err) {
+            // Wrong Refesh Token
+            console.log("wrong refresh token");
+            res.status(406).json({ message: "Unauthorized" });
+            return;
+        } else {
+            const { email, id } = decoded as { email: string; id: string };
+            // Correct token we send a new access token
+            const accessToken = jwt.sign(
+                {
+                    email: email,
+                    id: id,
+                },
+                "secret",
+                {
+                    expiresIn: "1H",
+                }
+            );
+            console.log("successfuly returned token");
+            res.status(200).json({ accessToken });
+            return;
+        }
+    });
 };
 // Middleware for JWT validation
 export const verifyToken = (
@@ -110,13 +118,13 @@ export const signUp: RequestHandler = async (
             .returning();
         user = inserted[0];
         const accessToken = jwt.sign(
-            { email: user.email } /* Change to user id */,
+            { email: user.email, id: user.id } /* Change to user id */,
             "secret",
             { expiresIn: "1h" }
         );
 
         const refreshToken = jwt.sign(
-            { email: user.email } /* Change to user id */,
+            { email: user.email, id: user.id } /* Change to user id */,
             "secret",
             { expiresIn: "7d" }
         );
@@ -136,6 +144,21 @@ export const signUp: RequestHandler = async (
     }
 };
 
+export const testAuthMethod = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const email = req.user!.email;
+        console.log("email");
+        console.log(email);
+        res.status(201).json({ email });
+        return;
+    } catch (error) {
+        next(new CustomError("Internal server error", 500));
+    }
+};
 export const login = async (
     req: Request,
     res: Response,
@@ -173,13 +196,13 @@ export const login = async (
         }
 
         const accessToken = jwt.sign(
-            { email: user.email } /* Change to user id */,
+            { email: user.email, id: user.id } /* Change to user id */,
             "secret",
             { expiresIn: "1h" }
         );
 
         const refreshToken = jwt.sign(
-            { email: user.email } /* Change to user id */,
+            { email: user.email, id: user.id } /* Change to user id */,
             "secret",
             { expiresIn: "7d" }
         );
@@ -221,5 +244,34 @@ export const getUserDetails = async (
         });
     } catch (error) {
         next(new CustomError("Internal server error", 500));
+    }
+};
+
+export const getUserMessages = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const userId = Number(req.params.userId);
+
+        const user = await db.query.users.findFirst({
+            where: eq(users.id, userId),
+        });
+
+        if (!user) {
+            res.status(404).json({
+                error: `User with id of ${userId} does not exist`,
+            });
+        }
+        const messagesResponse = await db.query.messages.findMany({
+            where: eq(messages.senderId, userId),
+        });
+
+        res.status(200).json({
+            messages: messagesResponse,
+        });
+    } catch (error) {
+        next(new CustomError(`Internal server error: ${error}`, 500));
     }
 };

@@ -5,6 +5,7 @@ import { chatRooms, messages, users } from "../db/schema";
 import { and, desc, eq, lt, sql } from "drizzle-orm";
 import { getUserCountInRoom } from "../services/SocketService";
 import { getIO } from "../services/socket";
+import { pubClient } from "../services/RedisClient";
 
 export const getRooms = async (
     req: Request,
@@ -93,7 +94,37 @@ export const getRoomById = async (
             messages: orderedMessages,
         });
     } catch (error) {
-        console.log(error);
+        next(new CustomError("Internal server error", 500));
+    }
+};
+
+export const getRoomMembers = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const roomId = Number(req.params.id);
+
+        // make sure room exist in db
+        const room = await db.query.chatRooms.findFirst({
+            where: eq(chatRooms.id, roomId),
+        });
+
+        // throw error if room not found
+        if (!room) {
+            res.status(404).json({
+                message: `Room with id of ${roomId} not found`,
+            });
+            return;
+        }
+
+        const members = await pubClient.sMembers(`room:${roomId}:members`);
+        res.status(200).json({
+            members,
+        });
+        return;
+    } catch (error) {
         next(new CustomError("Internal server error", 500));
     }
 };
