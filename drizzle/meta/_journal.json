@@ -15,6 +15,13 @@
       "when": 1747695077138,
       "tag": "0001_curious_thanos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1748228540228,
+      "tag": "0002_odd_lady_bullseye",
+      "breakpoints": true
     }
   ]
 }
