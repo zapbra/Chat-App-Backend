@@ -22,10 +22,11 @@ subClient.on("error", (err: any) =>
     console.log("Redis Sub Client Error:", err)
 );
 
-// Connection management
+let redisClients: RedisClients | null = null;
+
 let isConnected = false;
 
-export async function connectRedis(): Promise<RedisClients> {
+export async function connectRedis() {
     if (!isConnected) {
         try {
             await Promise.all([pubClient.connect(), subClient.connect()]);
@@ -38,6 +39,13 @@ export async function connectRedis(): Promise<RedisClients> {
     }
     return { pubClient, subClient };
 }
+
+export const getRedisClients = async () => {
+    if (!isConnected) {
+        return await connectRedis();
+    }
+    return { pubClient, subClient };
+};
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {

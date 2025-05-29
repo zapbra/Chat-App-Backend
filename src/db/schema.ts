@@ -26,7 +26,7 @@ export const chatRooms = table("chat_rooms", {
     ...timestamps,
 });
 
-export const messages = table("messages", {
+export const messages = t.pgTable("messages", {
     id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
     senderId: t
         .integer("sender_id")
@@ -37,6 +37,9 @@ export const messages = table("messages", {
         .references(() => chatRooms.id, { onDelete: "cascade" })
         .notNull(),
     message: t.text("message").notNull(),
+    replyingTo: t
+        .integer("replying_to")
+        .references((): t.AnyPgColumn => messages.id, { onDelete: "set null" }),
     ...timestamps,
 });
 

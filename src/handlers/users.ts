@@ -196,13 +196,13 @@ export const login = async (
         }
 
         const accessToken = jwt.sign(
-            { email: user.email, id: user.id } /* Change to user id */,
+            { email: user.email, id: user.id },
             "secret",
             { expiresIn: "1h" }
         );
 
         const refreshToken = jwt.sign(
-            { email: user.email, id: user.id } /* Change to user id */,
+            { email: user.email, id: user.id },
             "secret",
             { expiresIn: "7d" }
         );

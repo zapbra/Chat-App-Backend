@@ -1,0 +1,2 @@
+ALTER TABLE "messages" ADD COLUMN "replying_to" integer;--> statement-breakpoint
+ALTER TABLE "messages" ADD CONSTRAINT "messages_replying_to_messages_id_fk" FOREIGN KEY ("replying_to") REFERENCES "public"."messages"("id") ON DELETE set null ON UPDATE no action;

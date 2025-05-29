@@ -25,14 +25,20 @@ export const getRooms = async (
             .leftJoin(messages, eq(chatRooms.id, messages.roomId))
             .groupBy(chatRooms.id);
 
-        const roomsWithUserCount = rooms.map((room) => {
-            const activeUserCount = getUserCountInRoom(String(room.id));
+        console.log("rooms");
+        console.log(rooms);
+        const roomsWithUserCount = await Promise.all(
+            rooms.map(async (room) => {
+                const activeUserCount = await getUserCountInRoom(
+                    String(room.id)
+                );
 
-            return {
-                ...room,
-                activeUserCount,
-            };
-        });
+                return {
+                    ...room,
+                    activeUserCount,
+                };
+            })
+        );
 
         res.status(200).json(roomsWithUserCount);
     } catch (error) {
