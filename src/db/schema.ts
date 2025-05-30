@@ -1,6 +1,7 @@
 import * as t from "drizzle-orm/pg-core";
 import timestamps from "./columns.helpers";
 import { pgEnum, pgTable as table } from "drizzle-orm/pg-core";
+import { timestamp } from "drizzle-orm/pg-core";
 
 export const users = table(
     "users",
@@ -85,5 +86,107 @@ export const messageReactions = table(
             .uniqueIndex("user_message_emoji_unique_idx")
             .on(table.reacter_id, table.message_id, table.emoji),
         t.index("message_id_emoji_idx").on(table.message_id, table.emoji),
+    ]
+);
+
+export const directMessages = table(
+    "direct_messages",
+    {
+        id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
+        message: t.text("message").notNull(),
+        sender_id: t
+            .integer("sender_id")
+            .references(() => users.id, { onDelete: "set null" })
+            .notNull(),
+        receiver_id: t
+            .integer("receiver_id")
+            .references(() => users.id, { onDelete: "set null" })
+            .notNull(),
+        ...timestamps,
+    },
+    (table) => [
+        t.index("sender_receiver_idx").on(table.sender_id, table.receiver_id),
+    ]
+);
+
+export const directMessageReads = table("direct_message_reads", {
+    id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
+    user_id: t
+        .integer("user_id")
+        .references(() => users.id, { onDelete: "set null" })
+        .notNull(),
+    other_user_id: t
+        .integer("other_user_id")
+        .references(() => users.id, { onDelete: "set null" })
+        .notNull(),
+    last_read_message_id: t
+        .integer("last_read_message_id")
+        .references(() => messages.id, { onDelete: "set null" })
+        .notNull(),
+});
+
+export const chatMentions = table(
+    "chat_mentions",
+    {
+        id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
+        message_id: t
+            .integer("message_id")
+            .references(() => messages.id)
+            .notNull(),
+        mentioned_user_id: t
+            .integer("mentioned_user_id")
+            .references(() => users.id, { onDelete: "cascade" })
+            .notNull(),
+        seen_at: timestamp(),
+        ...timestamps,
+    },
+    (table) => [
+        t.index("mention_user_idx").on(table.mentioned_user_id),
+        t.index("mention_message_idx").on(table.message_id),
+    ]
+);
+
+export const favoriteChatrooms = table(
+    "favorite_chatrooms",
+    {
+        id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
+        chatroom_id: t
+            .integer("chatroom_id")
+            .references(() => chatRooms.id)
+            .notNull(),
+        user_id: t
+            .integer("user_id")
+            .references(() => users.id)
+            .notNull(),
+        ...timestamps,
+    },
+    (table) => [
+        t
+            .uniqueIndex("favorite_chatrooms_user_chatroom_unique_idx")
+            .on(table.chatroom_id, table.user_id),
+    ]
+);
+
+export const chatReads = table(
+    "chat_reads",
+    {
+        id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
+        user_id: t
+            .integer("user_id")
+            .references(() => users.id)
+            .notNull(),
+        chatroom_id: t
+            .integer("chatroom_id")
+            .references(() => chatRooms.id)
+            .notNull(),
+        last_read_message_id: t
+            .integer("last_read_message_id")
+            .references(() => messages.id)
+            .notNull(),
+    },
+    (table) => [
+        t
+            .uniqueIndex("chat_reads_user_chatroom_unique_idx")
+            .on(table.chatroom_id, table.user_id),
     ]
 );
