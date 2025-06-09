@@ -183,10 +183,42 @@ export const chatReads = table(
             .integer("last_read_message_id")
             .references(() => messages.id)
             .notNull(),
+        ...timestamps,
     },
     (table) => [
         t
             .uniqueIndex("chat_reads_user_chatroom_unique_idx")
             .on(table.chatroom_id, table.user_id),
+    ]
+);
+
+export const dmThreads = table(
+    "dm_threads",
+    {
+        id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
+        ...timestamps,
+    },
+    (table) => []
+);
+
+export const dmThreadParticipants = table(
+    "dm_thread_participants",
+    {
+        id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
+        thread_id: t
+            .integer("thread_id")
+            .references(() => dmThreads.id)
+            .notNull(),
+        user_id: t
+            .integer("user_id")
+            .references(() => users.id)
+            .notNull(),
+        ...timestamps,
+    },
+    (table) => [
+        t
+            .uniqueIndex("thread_user_unique_idx")
+            .on(table.thread_id, table.user_id),
+        t.index("user_id_idx").on(table.user_id),
     ]
 );
