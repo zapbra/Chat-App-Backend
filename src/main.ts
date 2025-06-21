@@ -13,6 +13,9 @@ import messageRouter from "./routes/messages";
 import { createClient } from "redis";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { connectRedis } from "./services/RedisClient";
+import jwt from "jsonwebtoken";
+import followersRouter from "./routes/followers";
+import directMessageRouter from "./routes/directMessages";
 
 async function main() {
     const { pubClient, subClient } = await connectRedis();
@@ -36,14 +39,66 @@ async function main() {
     app.use("/api", usersRouter);
     app.use("/api/rooms", roomsRouter);
     app.use("/api/messages", messageRouter);
+    app.use("/api/followers", followersRouter);
+    app.use("/api/dms", directMessageRouter);
 
     app.use(notFound);
     app.use(error);
 
     io.on("connection", async (socket) => {
-        socket.data.joinedRooms = new Set<string>();
         console.log("A user connected");
+        const token = socket.handshake.auth.token;
+        console.log(`Token: ${token}`);
 
+        if (!token) {
+            console.log("Missing token");
+            socket.disconnect();
+            return;
+        }
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET!);
+            if (typeof decoded !== "object" || !("id" in decoded)) {
+                console.log("Invalid token");
+                socket.disconnect();
+                return;
+            }
+            const userId = (decoded as any).id;
+            socket.data.userId = userId;
+            socket.data.joinedRooms = new Set<string>();
+            const userThreads = await MessageDataService.getAllUserDmThreads(
+                userId
+            );
+
+            console.log(`user threads: ${userThreads}`);
+
+            userThreads.forEach((thread) => {
+                const room = `thread:${thread.threadId}`;
+                socket.join(room);
+                socket.data.joinedRooms.add(room);
+            });
+        } catch (err: any) {
+            if (err.name === "TokenExpiredError") {
+                console.log("Token has expired");
+            } else {
+                console.log("JWT verification failed:", err.message);
+            }
+            socket.disconnect();
+        }
+
+        // Maybe add an indicator that the user is active in the chat, same for when they leave except vice-versa
+        socket.on("join dm", async (threadId: string) => {
+            threadId = String(threadId);
+            console.log("User has joined dm with id of : " + threadId);
+            socket.join(`thread:${threadId}`);
+        });
+
+        socket.on("leave dm", async (threadId: string) => {
+            threadId = String(threadId);
+            console.log("User has left dm with id of : " + threadId);
+            socket.leave(`thread:${threadId}`);
+        });
+
+        // Handle user joining room
         socket.on("join room", async (roomId: string) => {
             roomId = String(roomId);
             // Get logged in/guest username provided by client
@@ -87,6 +142,35 @@ async function main() {
             socket.leave(roomId);
             console.log(`User ${username} has left room ${roomId}`);
         });
+
+        socket.on(
+            "dm message",
+            async ({ senderId, receiverId, message, threadId }) => {
+                // Add code to validation thread id is valid
+                try {
+                    const { message: newMessage, threadId: threadIdResponse } =
+                        await MessageDataService.createDirectMessage(
+                            senderId,
+                            receiverId,
+                            message,
+                            threadId
+                        );
+                    console.log("new message");
+                    console.log(newMessage);
+                    if (newMessage) {
+                        console.log(
+                            `emitting dm message ${newMessage.message} to thread ${threadIdResponse}`
+                        );
+                        io.to(`thread:${threadIdResponse}`).emit("dm message", {
+                            thread_id: threadIdResponse,
+                            message: newMessage,
+                        });
+                    }
+                } catch (error) {
+                    console.log("error handling dm message: ", error);
+                }
+            }
+        );
         socket.on(
             "chat message",
             async ({ roomId, senderId, username, message }) => {

@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1749429319016,
+      "tag": "0000_regular_kabuki",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1749518822999,
+      "tag": "0001_striped_felicia_hardy",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1749678611963,
+      "tag": "0002_organic_kitty_pryde",
+      "breakpoints": true
+    }
+  ]
+}

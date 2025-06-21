@@ -1,11 +1,12 @@
 import { NextFunction, Request, Response } from "express";
 import { CustomError } from "../lib/custom-error";
-import { messages, users } from "../db/schema";
+import { followers, messages, users } from "../db/schema";
 import { db } from "../db/index";
-import { eq, or } from "drizzle-orm";
+import { and, eq, ilike, or } from "drizzle-orm";
 import { RequestHandler } from "express";
 import bcrypt from "bcryptjs";
 import jwt, { JwtPayload } from "jsonwebtoken";
+import { rawListeners } from "process";
 
 interface AuthPayload extends JwtPayload {
     email: string;
@@ -271,7 +272,151 @@ export const getUserMessages = async (
         res.status(200).json({
             messages: messagesResponse,
         });
+        return;
     } catch (error) {
         next(new CustomError(`Internal server error: ${error}`, 500));
+    }
+};
+
+export const getAllUsers = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const result = await db.select().from(users);
+        res.status(200).json({ users: result });
+        return;
+    } catch (error) {
+        if (error instanceof Error) {
+            next(
+                new CustomError(`Internal server error: ${error.message}`, 500)
+            );
+        } else {
+            next(new CustomError(`Unknown error`, 500));
+        }
+    }
+};
+
+export const searchUsers = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        if (!req.body.search) {
+            res.status(400).json({ error: "Missing search body parameter" });
+            return;
+        }
+
+        const search = `${req.body.search}%`;
+
+        const result = await db
+            .select({ id: users.id, username: users.username })
+            .from(users)
+            .where(ilike(users.username, search));
+
+        res.status(200).json({ users: result });
+    } catch (error) {
+        if (error instanceof Error) {
+            next(
+                new CustomError(`Internal server error: ${error.message}`, 500)
+            );
+        } else {
+            next(new CustomError(`Unknown error`, 500));
+        }
+    }
+};
+
+export const getUserById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const userId = Number(req.params.userId);
+
+        if (isNaN(userId)) {
+            res.status(400).json({ error: "Invalid user ID" });
+            return;
+        }
+
+        const [user] = await db
+            .select({
+                firstName: users.first_name,
+                lastName: users.last_name,
+                username: users.username,
+                email: users.email,
+                created_at: users.created_at,
+            })
+            .from(users)
+            .where(eq(users.id, userId))
+            .limit(1);
+
+        if (!user) {
+            res.status(404).json({
+                error: `User not found with id of ${userId}`,
+            });
+            return;
+        }
+        res.status(200).json({ user });
+    } catch (error) {
+        if (error instanceof Error) {
+            next(
+                new CustomError(`Internal server error: ${error.message}`, 500)
+            );
+        } else {
+            next(new CustomError(`Unknown error while geting user by id`, 500));
+        }
+    }
+};
+
+export const isUserFollowing = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        if (!req.user?.id) {
+            res.status(400).json({ error: "User is not authorized" });
+            return;
+        }
+        const loggedInUserId = req.user.id;
+
+        const userId = Number(req.params.userId);
+
+        if (isNaN(userId)) {
+            res.status(401).json({ error: "Invalid user ID" });
+            return;
+        }
+
+        const follow = await db
+            .select({ id: followers.id })
+            .from(followers)
+            .where(
+                and(
+                    eq(followers.following_id, userId),
+                    eq(followers.follower_id, loggedInUserId)
+                )
+            )
+            .limit(1);
+
+        const following = follow.length > 0;
+
+        res.status(200).json({ following });
+        return;
+    } catch (error) {
+        if (error instanceof Error) {
+            next(
+                new CustomError(`Internal server error: ${error.message}`, 500)
+            );
+        } else {
+            next(
+                new CustomError(
+                    `Unknown error while checking if user is following`,
+                    500
+                )
+            );
+        }
     }
 };

@@ -2,6 +2,7 @@ import * as t from "drizzle-orm/pg-core";
 import timestamps from "./columns.helpers";
 import { pgEnum, pgTable as table } from "drizzle-orm/pg-core";
 import { timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const users = table(
     "users",
@@ -16,7 +17,7 @@ export const users = table(
     },
     (table) => [
         t.uniqueIndex("email_idx").on(table.email),
-        t.uniqueIndex("username_idx").on(table.username),
+        t.uniqueIndex("username_lower_idx").on(sql`LOWER(${table.username})`),
     ]
 );
 
@@ -88,42 +89,6 @@ export const messageReactions = table(
         t.index("message_id_emoji_idx").on(table.message_id, table.emoji),
     ]
 );
-
-export const directMessages = table(
-    "direct_messages",
-    {
-        id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
-        message: t.text("message").notNull(),
-        sender_id: t
-            .integer("sender_id")
-            .references(() => users.id, { onDelete: "set null" })
-            .notNull(),
-        receiver_id: t
-            .integer("receiver_id")
-            .references(() => users.id, { onDelete: "set null" })
-            .notNull(),
-        ...timestamps,
-    },
-    (table) => [
-        t.index("sender_receiver_idx").on(table.sender_id, table.receiver_id),
-    ]
-);
-
-export const directMessageReads = table("direct_message_reads", {
-    id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
-    user_id: t
-        .integer("user_id")
-        .references(() => users.id, { onDelete: "set null" })
-        .notNull(),
-    other_user_id: t
-        .integer("other_user_id")
-        .references(() => users.id, { onDelete: "set null" })
-        .notNull(),
-    last_read_message_id: t
-        .integer("last_read_message_id")
-        .references(() => messages.id, { onDelete: "set null" })
-        .notNull(),
-});
 
 export const chatMentions = table(
     "chat_mentions",
@@ -215,10 +180,75 @@ export const dmThreadParticipants = table(
             .notNull(),
         ...timestamps,
     },
+    (table) => [t.uniqueIndex("thread_user_unique").on(table.id, table.user_id)]
+);
+
+export const directMessages = table(
+    "direct_messages",
+    {
+        id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
+        message: t.text("message").notNull(),
+        thread_id: t
+            .integer("thread_id")
+            .references(() => dmThreads.id)
+            .notNull(),
+        sender_id: t
+            .integer("sender_id")
+            .references(() => users.id, { onDelete: "set null" })
+            .notNull(),
+        receiver_id: t
+            .integer("receiver_id")
+            .references(() => users.id, { onDelete: "set null" })
+            .notNull(),
+        ...timestamps,
+    },
+    (table) => [
+        t.index("thread_created_idx").on(table.thread_id, table.created_at),
+    ]
+);
+
+export const directMessageReads = table(
+    "direct_message_reads",
+    {
+        id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
+        thread_id: t
+            .integer("thread_id")
+            .references(() => dmThreads.id)
+            .notNull(),
+        user_id: t
+            .integer("user_id")
+            .references(() => users.id, { onDelete: "set null" })
+            .notNull(),
+        last_read_message_id: t
+            .integer("last_read_message_id")
+            .references(() => directMessages.id, { onDelete: "set null" })
+            .notNull(),
+        ...timestamps,
+    },
     (table) => [
         t
-            .uniqueIndex("thread_user_unique_idx")
-            .on(table.thread_id, table.user_id),
-        t.index("user_id_idx").on(table.user_id),
+            .uniqueIndex("dm_message_reads_user_thread_unique_idx")
+            .on(table.user_id, table.thread_id),
+    ]
+);
+
+export const followers = table(
+    "followers",
+    {
+        id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
+        following_id: t
+            .integer("following_id")
+            .references(() => users.id, { onDelete: "cascade" })
+            .notNull(),
+        follower_id: t
+            .integer("follower_id")
+            .references(() => users.id, { onDelete: "cascade" })
+            .notNull(),
+        ...timestamps,
+    },
+    (table) => [
+        t
+            .uniqueIndex("followers_following_follower_unique_idx")
+            .on(table.following_id, table.follower_id),
     ]
 );

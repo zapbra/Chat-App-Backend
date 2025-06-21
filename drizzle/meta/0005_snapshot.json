@@ -1,10 +1,6 @@
 {
-<<<<<<< HEAD
-  "id": "ee7afb9d-6a7b-403a-8b4b-e8db8aec5263",
-=======
-  "id": "adb120f0-1e09-4f33-ba60-ef5822ff9d80",
->>>>>>> 27e7c9e4b0406cf1f39fbb7e8eac57608a01cdd7
-  "prevId": "15887aeb-4c74-457f-916f-18b73ad636f3",
+  "id": "5c09c8f6-98bf-46f5-933e-091e593e86fa",
+  "prevId": "adb120f0-1e09-4f33-ba60-ef5822ff9d80",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -172,7 +168,6 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
-<<<<<<< HEAD
         },
         "updated_at": {
           "name": "updated_at",
@@ -193,8 +188,6 @@
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
-=======
->>>>>>> 27e7c9e4b0406cf1f39fbb7e8eac57608a01cdd7
         }
       },
       "indexes": {
@@ -534,7 +527,250 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-<<<<<<< HEAD
+    "public.dm_messages": {
+      "name": "dm_messages",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "dm_messages_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "message": {
+          "name": "message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "thread_id": {
+          "name": "thread_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "receiver_id": {
+          "name": "receiver_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sender_id": {
+          "name": "sender_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "message_thread_idx": {
+          "name": "message_thread_idx",
+          "columns": [
+            {
+              "expression": "thread_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "dm_messages_thread_id_dm_threads_id_fk": {
+          "name": "dm_messages_thread_id_dm_threads_id_fk",
+          "tableFrom": "dm_messages",
+          "tableTo": "dm_threads",
+          "columnsFrom": [
+            "thread_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "dm_messages_receiver_id_users_id_fk": {
+          "name": "dm_messages_receiver_id_users_id_fk",
+          "tableFrom": "dm_messages",
+          "tableTo": "users",
+          "columnsFrom": [
+            "receiver_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "dm_messages_sender_id_users_id_fk": {
+          "name": "dm_messages_sender_id_users_id_fk",
+          "tableFrom": "dm_messages",
+          "tableTo": "users",
+          "columnsFrom": [
+            "sender_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.dm_reads": {
+      "name": "dm_reads",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "dm_reads_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "thread_id": {
+          "name": "thread_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_read_message_id": {
+          "name": "last_read_message_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "dm_reads_thread_id_dm_threads_id_fk": {
+          "name": "dm_reads_thread_id_dm_threads_id_fk",
+          "tableFrom": "dm_reads",
+          "tableTo": "dm_threads",
+          "columnsFrom": [
+            "thread_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "dm_reads_user_id_users_id_fk": {
+          "name": "dm_reads_user_id_users_id_fk",
+          "tableFrom": "dm_reads",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "dm_reads_last_read_message_id_dm_messages_id_fk": {
+          "name": "dm_reads_last_read_message_id_dm_messages_id_fk",
+          "tableFrom": "dm_reads",
+          "tableTo": "dm_messages",
+          "columnsFrom": [
+            "last_read_message_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.dm_thread_participants": {
       "name": "dm_thread_participants",
       "schema": "",
@@ -590,11 +826,11 @@
         }
       },
       "indexes": {
-        "thread_user_unique_idx": {
-          "name": "thread_user_unique_idx",
+        "thread_user_unique": {
+          "name": "thread_user_unique",
           "columns": [
             {
-              "expression": "thread_id",
+              "expression": "id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -607,21 +843,6 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "user_id_idx": {
-          "name": "user_id_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -711,8 +932,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-=======
->>>>>>> 27e7c9e4b0406cf1f39fbb7e8eac57608a01cdd7
     "public.favorite_chatrooms": {
       "name": "favorite_chatrooms",
       "schema": "",

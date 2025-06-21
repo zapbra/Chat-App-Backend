@@ -1,10 +1,6 @@
 {
-<<<<<<< HEAD
-  "id": "ee7afb9d-6a7b-403a-8b4b-e8db8aec5263",
-=======
-  "id": "adb120f0-1e09-4f33-ba60-ef5822ff9d80",
->>>>>>> 27e7c9e4b0406cf1f39fbb7e8eac57608a01cdd7
-  "prevId": "15887aeb-4c74-457f-916f-18b73ad636f3",
+  "id": "8a7871a8-f0a5-4285-ae14-8d9f5095b4e0",
+  "prevId": "5ef599d7-7418-466e-ace8-01ed32160572",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -172,7 +168,6 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
-<<<<<<< HEAD
         },
         "updated_at": {
           "name": "updated_at",
@@ -193,8 +188,6 @@
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
-=======
->>>>>>> 27e7c9e4b0406cf1f39fbb7e8eac57608a01cdd7
         }
       },
       "indexes": {
@@ -350,14 +343,14 @@
             "cycle": false
           }
         },
-        "user_id": {
-          "name": "user_id",
+        "thread_id": {
+          "name": "thread_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "other_user_id": {
-          "name": "other_user_id",
+        "user_id": {
+          "name": "user_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -367,10 +360,65 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "dm_message_reads_user_thread_unique_idx": {
+          "name": "dm_message_reads_user_thread_unique_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "thread_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
+        "direct_message_reads_thread_id_dm_threads_id_fk": {
+          "name": "direct_message_reads_thread_id_dm_threads_id_fk",
+          "tableFrom": "direct_message_reads",
+          "tableTo": "dm_threads",
+          "columnsFrom": [
+            "thread_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "direct_message_reads_user_id_users_id_fk": {
           "name": "direct_message_reads_user_id_users_id_fk",
           "tableFrom": "direct_message_reads",
@@ -384,23 +432,10 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "direct_message_reads_other_user_id_users_id_fk": {
-          "name": "direct_message_reads_other_user_id_users_id_fk",
+        "direct_message_reads_last_read_message_id_direct_messages_id_fk": {
+          "name": "direct_message_reads_last_read_message_id_direct_messages_id_fk",
           "tableFrom": "direct_message_reads",
-          "tableTo": "users",
-          "columnsFrom": [
-            "other_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "direct_message_reads_last_read_message_id_messages_id_fk": {
-          "name": "direct_message_reads_last_read_message_id_messages_id_fk",
-          "tableFrom": "direct_message_reads",
-          "tableTo": "messages",
+          "tableTo": "direct_messages",
           "columnsFrom": [
             "last_read_message_id"
           ],
@@ -444,6 +479,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "thread_id": {
+          "name": "thread_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
         "sender_id": {
           "name": "sender_id",
           "type": "integer",
@@ -478,17 +519,17 @@
         }
       },
       "indexes": {
-        "sender_receiver_idx": {
-          "name": "sender_receiver_idx",
+        "thread_created_idx": {
+          "name": "thread_created_idx",
           "columns": [
             {
-              "expression": "sender_id",
+              "expression": "thread_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "receiver_id",
+              "expression": "created_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -501,6 +542,19 @@
         }
       },
       "foreignKeys": {
+        "direct_messages_thread_id_dm_threads_id_fk": {
+          "name": "direct_messages_thread_id_dm_threads_id_fk",
+          "tableFrom": "direct_messages",
+          "tableTo": "dm_threads",
+          "columnsFrom": [
+            "thread_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "direct_messages_sender_id_users_id_fk": {
           "name": "direct_messages_sender_id_users_id_fk",
           "tableFrom": "direct_messages",
@@ -534,7 +588,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-<<<<<<< HEAD
     "public.dm_thread_participants": {
       "name": "dm_thread_participants",
       "schema": "",
@@ -590,11 +643,11 @@
         }
       },
       "indexes": {
-        "thread_user_unique_idx": {
-          "name": "thread_user_unique_idx",
+        "thread_user_unique": {
+          "name": "thread_user_unique",
           "columns": [
             {
-              "expression": "thread_id",
+              "expression": "id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -607,21 +660,6 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "user_id_idx": {
-          "name": "user_id_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -711,8 +749,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-=======
->>>>>>> 27e7c9e4b0406cf1f39fbb7e8eac57608a01cdd7
     "public.favorite_chatrooms": {
       "name": "favorite_chatrooms",
       "schema": "",
@@ -815,6 +851,117 @@
             "id"
           ],
           "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.followers": {
+      "name": "followers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "followers_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "following_id": {
+          "name": "following_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "follower_id": {
+          "name": "follower_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "followers_following_follower_unique_idx": {
+          "name": "followers_following_follower_unique_idx",
+          "columns": [
+            {
+              "expression": "following_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "follower_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "followers_following_id_users_id_fk": {
+          "name": "followers_following_id_users_id_fk",
+          "tableFrom": "followers",
+          "tableTo": "users",
+          "columnsFrom": [
+            "following_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "followers_follower_id_users_id_fk": {
+          "name": "followers_follower_id_users_id_fk",
+          "tableFrom": "followers",
+          "tableTo": "users",
+          "columnsFrom": [
+            "follower_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -1296,13 +1443,13 @@
           "method": "btree",
           "with": {}
         },
-        "username_idx": {
-          "name": "username_idx",
+        "username_lower_idx": {
+          "name": "username_lower_idx",
           "columns": [
             {
-              "expression": "username",
-              "isExpression": false,
+              "expression": "LOWER(\"username\")",
               "asc": true,
+              "isExpression": true,
               "nulls": "last"
             }
           ],
