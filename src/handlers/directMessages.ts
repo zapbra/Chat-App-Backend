@@ -123,11 +123,11 @@ export const getDirectMessages = async (
             .select({
                 id: directMessages.id,
                 message: directMessages.message,
+                sender_id: directMessages.sender_id,
+                receiver_id: directMessages.receiver_id,
                 created_at: directMessages.created_at,
                 updated_at: directMessages.updated_at,
                 deleted_at: directMessages.deleted_at,
-                sender_id: directMessages.sender_id,
-                receiver_id: directMessages.receiver_id,
             })
             .from(directMessages)
             .where(eq(directMessages.thread_id, threadId))

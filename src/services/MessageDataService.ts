@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "../db";
 import {
     directMessages,
@@ -11,11 +11,17 @@ export class MessageDataService {
     static async createMessage(
         roomId: string,
         senderId: number,
-        message: string
+        message: string,
+        replyId: number | null
     ) {
         return await db
             .insert(messages)
-            .values({ senderId, roomId: Number(roomId), message })
+            .values({
+                senderId,
+                roomId: Number(roomId),
+                message,
+                replyingTo: replyId,
+            })
             .returning();
     }
 
@@ -46,6 +52,61 @@ export class MessageDataService {
             throw new CustomError("Could not create thread", 500);
         }
     }
+
+    static async getMessageById(messageId: number) {
+        try {
+            const message = (
+                await db.execute(
+                    sql`
+                 SELECT 
+                messages.id,
+                messages.message,
+                messages.created_at,
+                messages.updated_at,
+                messages.deleted_at,
+                messages.sender_id,
+                message_users.username,
+
+                replying.id AS replying_to_id,
+                replying.message AS replying_to_message,
+                replying.created_at AS replying_to_created_at,
+                replying_user.username AS replying_to_username,
+
+                (
+                    SELECT json_agg(json_build_object('id', likes.id, 'username', like_users.username))
+                    FROM likes
+                    LEFT JOIN users AS like_users ON likes.liker_id = like_users.id
+                    WHERE likes.message_id = messages.id
+                ) AS likes,
+
+                (
+                    SELECT json_agg(json_build_object('emoji', message_reactions.emoji, 'username', reaction_users.username))
+                    FROM message_reactions
+                    LEFT JOIN users AS reaction_users ON message_reactions.reacter_id = reaction_users.id
+                    WHERE message_reactions.message_id = messages.id
+                ) AS reactions,
+
+                (
+                    SELECT count(*) FROM likes WHERE likes.message_id = messages.id
+                ) AS likes_count
+
+                FROM messages
+                LEFT JOIN users AS message_users ON messages.sender_id = message_users.id
+                LEFT JOIN messages AS replying ON messages.replying_to = replying.id
+                LEFT JOIN users AS replying_user ON replying.sender_id = replying_user.id
+                WHERE messages.id = ${messageId}
+                ORDER BY messages.id DESC
+                LIMIT(1);`
+                )
+            ).rows?.[0];
+
+            return message;
+        } catch (error) {
+            console.error("Error fetching message by ID:", error);
+            return null;
+        }
+    }
+
     static async createDirectMessage(
         senderId: number,
         receiverId: number,

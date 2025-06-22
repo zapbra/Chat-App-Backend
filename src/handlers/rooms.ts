@@ -71,65 +71,54 @@ export const getRoomById = async (
             return;
         }
 
-        const whereClause = beforeId
-            ? and(eq(messages.roomId, roomId), lt(messages.id, beforeId))
-            : eq(messages.roomId, roomId);
+        const baseWhereClause = beforeId
+            ? sql`WHERE messages.room_id = ${roomId} AND messages.id < ${beforeId}`
+            : sql`WHERE messages.room_id = ${roomId}`;
 
-        const messagesResult = await db.execute(
-            sql`
-                 SELECT 
-                messages.id,
-                messages.message,
-                messages.created_at,
-                messages.updated_at,
-                messages.deleted_at,
-                messages.sender_id,
-                message_users.username,
+        const query = sql`
+        SELECT 
+            messages.id,
+            messages.message,
+            messages.created_at,
+            messages.updated_at,
+            messages.deleted_at,
+            messages.sender_id,
+            message_users.username,
 
-                (
-                    SELECT json_agg(json_build_object('id', likes.id, 'username', like_users.username))
-                    FROM likes
-                    LEFT JOIN users AS like_users ON likes.liker_id = like_users.id
-                    WHERE likes.message_id = messages.id
-                ) AS likes,
+            replying.id AS replying_to_id,
+            replying.message AS replying_to_message,
+            replying.created_at AS replying_to_created_at,
+            replying_user.username AS replying_to_username,
 
-                (
-                    SELECT json_agg(json_build_object('emoji', message_reactions.emoji, 'username', reaction_users.username))
-                    FROM message_reactions
-                    LEFT JOIN users AS reaction_users ON message_reactions.reacter_id = reaction_users.id
-                    WHERE message_reactions.message_id = messages.id
-                ) AS reactions,
+            (
+                SELECT json_agg(json_build_object('id', likes.id, 'username', like_users.username))
+                FROM likes
+                LEFT JOIN users AS like_users ON likes.liker_id = like_users.id
+                WHERE likes.message_id = messages.id
+            ) AS likes,
 
-                (
-                    SELECT count(*) FROM likes WHERE likes.message_id = messages.id
-                ) AS likes_count
+            (
+                SELECT json_agg(json_build_object('emoji', message_reactions.emoji, 'username', reaction_users.username))
+                FROM message_reactions
+                LEFT JOIN users AS reaction_users ON message_reactions.reacter_id = reaction_users.id
+                WHERE message_reactions.message_id = messages.id
+            ) AS reactions,
 
-                FROM messages
-                LEFT JOIN users AS message_users ON messages.sender_id = message_users.id
-                WHERE messages.room_id = ${roomId}
-                ORDER BY messages.id DESC
-                LIMIT(${limit});`
-        );
-        // const messagesResult = await db
-        //     .select({
-        //         id: messages.id,
-        //         message: messages.message,
-        //         created_at: messages.created_at,
-        //         updated_at: messages.updated_at,
-        //         deleted_at: messages.deleted_at,
-        //         sender_id: messages.senderId,
-        //         username: users.username,
-        //         like_id: likes.id,
-        //         liker_id: likes.liker_id,
-        //     })
-        //     .from(messages)
-        //     .innerJoin(users, eq(messages.senderId, users.id))
-        //     .leftJoin(likes, eq(likes.message_id, messages.id))
-        //     .where(whereClause)
-        //     .orderBy(desc(messages.id))
-        //     .limit(limit);
+            (
+                SELECT count(*) FROM likes WHERE likes.message_id = messages.id
+            ) AS likes_count
+
+            FROM messages
+            LEFT JOIN users AS message_users ON messages.sender_id = message_users.id
+            LEFT JOIN messages AS replying ON messages.replying_to = replying.id
+            LEFT JOIN users AS replying_user ON replying.sender_id = replying_user.id
+`
+            .append(baseWhereClause)
+            .append(sql` ORDER BY messages.id DESC LIMIT(${limit})`);
+        const messagesResult = await db.execute(query);
 
         const orderedMessages = messagesResult.rows.reverse();
+
         // return room and messages
         res.status(200).json({
             room,
@@ -161,7 +150,7 @@ export const getRoomMembers = async (
             return;
         }
 
-        const members = await pubClient.sMembers(`room:${roomId}:members`);
+        const members = await pubClient.zRange(`room:${roomId}:members`, 0, -1);
         res.status(200).json({
             members,
         });

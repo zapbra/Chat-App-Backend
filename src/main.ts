@@ -16,6 +16,7 @@ import { connectRedis } from "./services/RedisClient";
 import jwt from "jsonwebtoken";
 import followersRouter from "./routes/followers";
 import directMessageRouter from "./routes/directMessages";
+import { startRoomCleanup } from "./services/roomCleanup";
 
 async function main() {
     const { pubClient, subClient } = await connectRedis();
@@ -25,6 +26,8 @@ async function main() {
     initSocket(server);
     const io = getIO();
     io.adapter(createAdapter(pubClient, subClient));
+
+    startRoomCleanup(io, pubClient);
 
     app.use(cors());
     app.use(express.json());
@@ -46,10 +49,10 @@ async function main() {
     app.use(error);
 
     io.on("connection", async (socket) => {
-        console.log("A user connected");
-        const token = socket.handshake.auth.token;
-        console.log(`Token: ${token}`);
+        console.log("📡 New connection, socket ID:", socket.id);
+        console.log("Listening for join room events");
 
+        const token = socket.handshake.auth.token;
         if (!token) {
             console.log("Missing token");
             socket.disconnect();
@@ -69,8 +72,6 @@ async function main() {
                 userId
             );
 
-            console.log(`user threads: ${userThreads}`);
-
             userThreads.forEach((thread) => {
                 const room = `thread:${thread.threadId}`;
                 socket.join(room);
@@ -85,6 +86,68 @@ async function main() {
             socket.disconnect();
         }
 
+        socket.onAny((event, ...args) => {
+            console.log(`🔎 Received event: ${event}`, args);
+        });
+
+        // Handle user joining room
+        socket.on("join room", async (roomId: string) => {
+            roomId = String(roomId);
+
+            const roomKey = `room:${roomId}:members`;
+            const exists = await pubClient.exists(roomKey);
+
+            if (!exists) {
+                await pubClient.sAdd("rooms:all", roomKey);
+            }
+            console.log(`user is attempting to join room ${roomId}`);
+
+            // Get logged in/guest username provided by client
+            const username = socket.handshake.auth.username;
+
+            socket.data.joinedRooms.add(roomId);
+            // Add user to room's set
+            const expiryTimestamp = Date.now() + 5 * 60 * 1000;
+            await pubClient.zAdd(roomKey, {
+                score: expiryTimestamp,
+                value: username,
+            });
+
+            // Join the room
+            socket.join(roomId);
+
+            const members = await pubClient.zRange(roomKey, 0, -1);
+            // Broadcast updated members list
+            io.to(roomId).emit("members:updated", members);
+
+            console.log(`User ${username} has joined room ${roomId}`);
+        });
+
+        socket.on("leave room", async (roomId: string) => {
+            roomId = String(roomId);
+            const roomKey = `room:${roomId}:members`;
+            const username = socket.handshake.auth.username;
+
+            socket.data.joinedRooms.delete(roomId);
+            // Remove user from room's Set
+            await pubClient.zRem(roomKey, username);
+
+            // Clean up empty room
+            const memberCount = await pubClient.zCard(roomKey);
+            if (memberCount === 0) {
+                await pubClient.del(roomKey);
+                await pubClient.sRem("rooms:all", roomKey);
+            } else {
+                // Broadcast updated members list
+                const members = await pubClient.zRange(roomKey, 0, -1);
+                io.to(roomId).emit("members:updated", members);
+            }
+
+            // Leave the room
+            socket.leave(roomId);
+            console.log(`User ${username} has left room ${roomId}`);
+        });
+
         // Maybe add an indicator that the user is active in the chat, same for when they leave except vice-versa
         socket.on("join dm", async (threadId: string) => {
             threadId = String(threadId);
@@ -96,51 +159,6 @@ async function main() {
             threadId = String(threadId);
             console.log("User has left dm with id of : " + threadId);
             socket.leave(`thread:${threadId}`);
-        });
-
-        // Handle user joining room
-        socket.on("join room", async (roomId: string) => {
-            roomId = String(roomId);
-            // Get logged in/guest username provided by client
-            const username = socket.handshake.auth.username;
-
-            socket.data.joinedRooms.add(roomId);
-            // Add user to room's set
-            await pubClient.sAdd(`room:${roomId}:members`, username);
-
-            // Join the room
-            socket.join(roomId);
-
-            const members = await pubClient.sMembers(`room:${roomId}:members`);
-            // Broadcast updated members list
-            io.to(roomId).emit("members:updated", members);
-
-            console.log(`User ${username} has joined room ${roomId}`);
-        });
-
-        socket.on("leave room", async (roomId: string) => {
-            roomId = String(roomId);
-            const username = socket.handshake.auth.username;
-
-            socket.data.joinedRooms.delete(roomId);
-            // Remove user from room's Set
-            await pubClient.sRem(`room:${roomId}:members`, username);
-
-            // Clean up empty room
-            const memberCount = await pubClient.sCard(`room:${roomId}:members`);
-            if (memberCount === 0) {
-                await pubClient.del(`room:${roomId}:members`);
-            } else {
-                // Broadcast updated members list
-                const members = await pubClient.sMembers(
-                    `room:${roomId}:members`
-                );
-                io.to(roomId).emit("members:updated", members);
-            }
-
-            // Leave the room
-            socket.leave(roomId);
-            console.log(`User ${username} has left room ${roomId}`);
         });
 
         socket.on(
@@ -173,7 +191,7 @@ async function main() {
         );
         socket.on(
             "chat message",
-            async ({ roomId, senderId, username, message }) => {
+            async ({ roomId, senderId, username, message, replyId }) => {
                 try {
                     console.log(
                         `User ${senderId}: ${username} sent message: ${message} in room ${roomId}`
@@ -182,18 +200,26 @@ async function main() {
                         await MessageDataService.createMessage(
                             roomId,
                             senderId,
-                            message
+                            message,
+                            replyId
                         );
                     if (createdMessage) {
                         console.log(
                             `emitting message ${message} to room ${roomId}`
                         );
+                        const replyMessage =
+                            await MessageDataService.getMessageById(replyId);
                         io.to(roomId).emit("chat message", {
                             id: createdMessage.id,
                             message,
                             created_at: new Date().toISOString(),
                             sender_id: senderId,
                             username: username,
+                            replying_to_id: replyMessage?.id,
+                            replying_to_message: replyMessage?.message,
+                            replying_to_created_at: replyMessage?.created_at,
+                            replying_to_username:
+                                replyMessage?.replying_to_username,
                         });
                     }
                 } catch (error) {
@@ -208,17 +234,15 @@ async function main() {
             const username = socket.handshake.auth.username;
 
             for (const roomId of socket.data.joinedRooms) {
-                await pubClient.sRem(`room:${roomId}:members`, username);
-                const memberCount = await pubClient.sCard(
-                    `room:${roomId}:members`
-                );
+                const roomKey = `room:${roomId}:members`;
+                await pubClient.zRem(roomKey, username);
+                const memberCount = await pubClient.zCard(roomKey);
 
                 if (memberCount === 0) {
-                    await pubClient.del(`room:${roomId}:members`);
+                    await pubClient.del(roomKey);
+                    await pubClient.sRem("rooms:all", roomKey);
                 } else {
-                    const members = await pubClient.sMembers(
-                        `room:${roomId}:members`
-                    );
+                    const members = await pubClient.zRange(roomKey, 0, -1);
                     io.to(roomId).emit("members:updated", members);
                 }
             }
