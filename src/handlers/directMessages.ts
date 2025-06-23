@@ -134,11 +134,37 @@ export const getDirectMessages = async (
             .orderBy(desc(directMessages.id))
             .limit(limit);
 
+        const userDmRead = await db
+            .select()
+            .from(directMessageReads)
+            .where(
+                and(
+                    eq(directMessageReads.user_id, loggedInUserId),
+                    eq(directMessageReads.thread_id, threadId)
+                )
+            )
+            .limit(1)
+            .then((rows) => rows[0]);
+
+        const otherUserDmRead = await db
+            .select()
+            .from(directMessageReads)
+            .where(
+                and(
+                    eq(directMessageReads.user_id, otherUserId),
+                    eq(directMessageReads.thread_id, threadId)
+                )
+            )
+            .limit(1)
+            .then((rows) => rows[0]);
+
         const orderedMessages = messages.reverse();
 
         res.status(200).json({
             threadId: threadId,
             messages: orderedMessages,
+            userDmRead,
+            otherUserDmRead,
         });
     } catch (error) {
         if (error instanceof Error) {

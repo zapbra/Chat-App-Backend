@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "../db";
 import {
+    directMessageReads,
     directMessages,
     dmThreadParticipants,
     dmThreads,
@@ -41,7 +42,10 @@ export class MessageDataService {
                     { thread_id: threadId, user_id: userAId },
                     { thread_id: threadId, user_id: userBId },
                 ]);
-
+                await tx.insert(directMessageReads).values([
+                    { thread_id: threadId, user_id: userAId },
+                    { thread_id: threadId, user_id: userBId },
+                ]);
                 return threadId;
             });
 

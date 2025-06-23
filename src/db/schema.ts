@@ -200,10 +200,62 @@ export const directMessages = table(
             .integer("receiver_id")
             .references(() => users.id, { onDelete: "set null" })
             .notNull(),
+        replyingTo: t
+            .integer("replying_to")
+            .references((): t.AnyPgColumn => messages.id, {
+                onDelete: "set null",
+            }),
         ...timestamps,
     },
     (table) => [
         t.index("thread_created_idx").on(table.thread_id, table.created_at),
+    ]
+);
+
+export const dmLikes = table(
+    "dm_likes",
+    {
+        id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
+        liker_id: t
+            .integer("liker_id")
+            .references(() => users.id)
+            .notNull(),
+        message_id: t
+            .integer("message_id")
+            .references(() => directMessages.id, { onDelete: "cascade" })
+            .notNull(),
+        ...timestamps,
+    },
+    (table) => [
+        t
+            .uniqueIndex("dm_likes_liker_message_unique_idx")
+            .on(table.liker_id, table.message_id),
+        t.index("dm_likes_message_id_idx").on(table.message_id),
+    ]
+);
+
+export const dmReactions = table(
+    "dm_reactions",
+    {
+        id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
+        reacter_id: t
+            .integer("reacter_id")
+            .references(() => users.id)
+            .notNull(),
+        emoji: t.text("emoji").notNull(),
+        message_id: t
+            .integer("message_id")
+            .references(() => directMessages.id, { onDelete: "cascade" })
+            .notNull(),
+        ...timestamps,
+    },
+    (table) => [
+        t
+            .uniqueIndex("dm_reactions_user_message_emoji_unique_idx")
+            .on(table.reacter_id, table.message_id, table.emoji),
+        t
+            .index("dm_reactions_message_id_emoji_idx")
+            .on(table.message_id, table.emoji),
     ]
 );
 
@@ -221,8 +273,7 @@ export const directMessageReads = table(
             .notNull(),
         last_read_message_id: t
             .integer("last_read_message_id")
-            .references(() => directMessages.id, { onDelete: "set null" })
-            .notNull(),
+            .references(() => directMessages.id, { onDelete: "set null" }),
         ...timestamps,
     },
     (table) => [

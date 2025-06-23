@@ -1,0 +1,1 @@
+ALTER TABLE "direct_message_reads" ALTER COLUMN "last_read_message_id" DROP NOT NULL;

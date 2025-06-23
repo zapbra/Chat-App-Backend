@@ -22,6 +22,20 @@
       "when": 1749678611963,
       "tag": "0002_organic_kitty_pryde",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1750561322083,
+      "tag": "0003_rapid_silver_centurion",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1750617167286,
+      "tag": "0004_old_overlord",
+      "breakpoints": true
     }
   ]
 }
