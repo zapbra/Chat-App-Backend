@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "../db";
 import {
     directMessageReads,
@@ -171,6 +171,36 @@ export class MessageDataService {
                 error instanceof Error
                     ? error.message
                     : "Could not fetch user DM threads",
+                500
+            );
+        }
+    }
+
+    static async updateDmMessageRead(
+        threadId: number,
+        userId: number,
+        messageId: number
+    ) {
+        try {
+            const [updatedRow] = await db
+                .update(directMessageReads)
+                .set({
+                    last_read_message_id: messageId,
+                })
+                .where(
+                    and(
+                        eq(directMessageReads.user_id, userId),
+                        eq(directMessageReads.thread_id, threadId)
+                    )
+                )
+                .returning();
+
+            return updatedRow;
+        } catch (error) {
+            throw new CustomError(
+                error instanceof Error
+                    ? error.message
+                    : "Could not update dm message read with latest message",
                 500
             );
         }

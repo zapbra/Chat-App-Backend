@@ -34,7 +34,6 @@ export function startRoomCleanup(io: Server, pubClient: RedisClientType) {
                 );
 
                 io.to(roomId).emit("members:updated", updatedMembers);
-                console.log(`Cleaned up expired users in room ${roomId}`);
             }
         }
     }, 60 * 1000); // every minute

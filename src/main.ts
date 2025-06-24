@@ -49,28 +49,22 @@ async function main() {
     app.use(error);
 
     io.on("connection", async (socket) => {
-        console.log("📡 New connection, socket ID:", socket.id);
-        console.log("Listening for join room events");
-
         const token = socket.handshake.auth.token;
         if (!token) {
-            console.log("Missing token");
             socket.disconnect();
             return;
         }
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET!);
             if (typeof decoded !== "object" || !("id" in decoded)) {
-                console.log("Invalid token");
                 socket.disconnect();
                 return;
             }
             const userId = (decoded as any).id;
             socket.data.userId = userId;
             socket.data.joinedRooms = new Set<string>();
-            const userThreads = await MessageDataService.getAllUserDmThreads(
-                userId
-            );
+            const userThreads =
+                await MessageDataService.getAllUserDmThreads(userId);
 
             userThreads.forEach((thread) => {
                 const room = `thread:${thread.threadId}`;
@@ -79,16 +73,10 @@ async function main() {
             });
         } catch (err: any) {
             if (err.name === "TokenExpiredError") {
-                console.log("Token has expired");
             } else {
-                console.log("JWT verification failed:", err.message);
             }
             socket.disconnect();
         }
-
-        socket.onAny((event, ...args) => {
-            console.log(`🔎 Received event: ${event}`, args);
-        });
 
         // Handle user joining room
         socket.on("join room", async (roomId: string) => {
@@ -100,7 +88,6 @@ async function main() {
             if (!exists) {
                 await pubClient.sAdd("rooms:all", roomKey);
             }
-            console.log(`user is attempting to join room ${roomId}`);
 
             // Get logged in/guest username provided by client
             const username = socket.handshake.auth.username;
@@ -119,8 +106,6 @@ async function main() {
             const members = await pubClient.zRange(roomKey, 0, -1);
             // Broadcast updated members list
             io.to(roomId).emit("members:updated", members);
-
-            console.log(`User ${username} has joined room ${roomId}`);
         });
 
         socket.on("leave room", async (roomId: string) => {
@@ -145,21 +130,46 @@ async function main() {
 
             // Leave the room
             socket.leave(roomId);
-            console.log(`User ${username} has left room ${roomId}`);
         });
 
         // Maybe add an indicator that the user is active in the chat, same for when they leave except vice-versa
         socket.on("join dm", async (threadId: string) => {
             threadId = String(threadId);
-            console.log("User has joined dm with id of : " + threadId);
             socket.join(`thread:${threadId}`);
+            socket.emit("joined dm");
         });
 
         socket.on("leave dm", async (threadId: string) => {
             threadId = String(threadId);
-            console.log("User has left dm with id of : " + threadId);
             socket.leave(`thread:${threadId}`);
         });
+
+        socket.on(
+            "dm message read",
+            async ({
+                threadId,
+                userId,
+                messageId,
+            }: {
+                threadId: number;
+                userId: number;
+                messageId: number;
+            }) => {
+                try {
+                    const updatedDmMessageRead =
+                        await MessageDataService.updateDmMessageRead(
+                            threadId,
+                            userId,
+                            messageId
+                        );
+
+                    io.to(`thread:${threadId}`).emit(
+                        "dm message read",
+                        updatedDmMessageRead
+                    );
+                } catch (error) {}
+            }
+        );
 
         socket.on(
             "dm message",
@@ -173,29 +183,19 @@ async function main() {
                             message,
                             threadId
                         );
-                    console.log("new message");
-                    console.log(newMessage);
                     if (newMessage) {
-                        console.log(
-                            `emitting dm message ${newMessage.message} to thread ${threadIdResponse}`
-                        );
                         io.to(`thread:${threadIdResponse}`).emit("dm message", {
                             thread_id: threadIdResponse,
                             message: newMessage,
                         });
                     }
-                } catch (error) {
-                    console.log("error handling dm message: ", error);
-                }
+                } catch (error) {}
             }
         );
         socket.on(
             "chat message",
             async ({ roomId, senderId, username, message, replyId }) => {
                 try {
-                    console.log(
-                        `User ${senderId}: ${username} sent message: ${message} in room ${roomId}`
-                    );
                     const [createdMessage] =
                         await MessageDataService.createMessage(
                             roomId,
@@ -204,9 +204,6 @@ async function main() {
                             replyId
                         );
                     if (createdMessage) {
-                        console.log(
-                            `emitting message ${message} to room ${roomId}`
-                        );
                         const replyMessage =
                             await MessageDataService.getMessageById(replyId);
                         io.to(roomId).emit("chat message", {
@@ -230,7 +227,6 @@ async function main() {
         );
 
         socket.on("disconnect", async () => {
-            console.log("A user disconnected");
             const username = socket.handshake.auth.username;
 
             for (const roomId of socket.data.joinedRooms) {
@@ -249,9 +245,7 @@ async function main() {
         });
     });
 
-    server.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`);
-    });
+    server.listen(PORT, () => {});
 }
 
 main().catch(console.error);

@@ -18,10 +18,8 @@ export const refreshToken: RequestHandler = (
     res: Response,
     next: NextFunction
 ) => {
-    console.log("called refresh token function");
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer")) {
-        console.log("bad auth header");
         res.status(406).json({ message: "Unauthorized" });
         return;
     }
@@ -31,7 +29,6 @@ export const refreshToken: RequestHandler = (
     jwt.verify(refreshToken, "secret", (err: any, decoded: any) => {
         if (err) {
             // Wrong Refesh Token
-            console.log("wrong refresh token");
             res.status(406).json({ message: "Unauthorized" });
             return;
         } else {
@@ -47,7 +44,6 @@ export const refreshToken: RequestHandler = (
                     expiresIn: "1H",
                 }
             );
-            console.log("successfuly returned token");
             res.status(200).json({ accessToken });
             return;
         }
@@ -152,8 +148,6 @@ export const testAuthMethod = async (
 ) => {
     try {
         const email = req.user!.email;
-        console.log("email");
-        console.log(email);
         res.status(201).json({ email });
         return;
     } catch (error) {
@@ -187,13 +181,11 @@ export const login = async (
         );
 
         if (!passwordMatch) {
-            console.log("password doesnt match");
             res.status(401).json({
                 message: "Invalid credentials. Wrong password",
             });
             return;
         } else {
-            console.log("password matches");
         }
 
         const accessToken = jwt.sign(

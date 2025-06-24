@@ -31,9 +31,7 @@ export async function connectRedis() {
         try {
             await Promise.all([pubClient.connect(), subClient.connect()]);
             isConnected = true;
-            console.log("Redis clients connected");
         } catch (err) {
-            console.log("Redis connection failed:", err);
             throw err;
         }
     }
@@ -51,7 +49,6 @@ export const getRedisClients = async () => {
 process.on("SIGTERM", async () => {
     await pubClient.quit();
     await subClient.quit();
-    console.log("Redis clients disconnected");
 });
 
 export { pubClient, subClient };
