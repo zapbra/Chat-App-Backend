@@ -36,6 +36,20 @@
       "when": 1750617167286,
       "tag": "0004_old_overlord",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1750742594946,
+      "tag": "0005_smart_puff_adder",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1750742724210,
+      "tag": "0006_same_champions",
+      "breakpoints": true
     }
   ]
 }

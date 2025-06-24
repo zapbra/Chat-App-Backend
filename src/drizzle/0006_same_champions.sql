@@ -1,0 +1,1 @@
+ALTER TABLE "fake_table" ADD COLUMN "name" text;

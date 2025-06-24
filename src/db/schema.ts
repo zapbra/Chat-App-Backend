@@ -303,3 +303,8 @@ export const followers = table(
             .on(table.following_id, table.follower_id),
     ]
 );
+
+export const fakeTable = table("fake_table", {
+    id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
+    name: t.text("name"),
+});
