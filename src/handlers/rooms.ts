@@ -102,7 +102,7 @@ export const getRoomById = async (
                 FROM message_reactions
                 LEFT JOIN users AS reaction_users ON message_reactions.reacter_id = reaction_users.id
                 WHERE message_reactions.message_id = messages.id
-            ) AS reactions,
+            ) AS raw_reactions,
 
             (
                 SELECT count(*) FROM likes WHERE likes.message_id = messages.id
