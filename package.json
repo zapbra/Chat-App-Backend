@@ -33,12 +33,14 @@
         "socket.io": "^4.8.1"
     },
     "devDependencies": {
-        "@types/cors": "^2.8.17",
-        "@types/express": "^5.0.1",
-        "@types/jsonwebtoken": "^9.0.9",
-        "@types/node": "^22.14.1",
+        "@types/bcryptjs": "^3.0.0",
+        "@types/cors": "^2.8.19",
+        "@types/express": "^5.0.3",
+        "@types/jsonwebtoken": "^9.0.10",
+        "@types/node": "^22.15.32",
         "@types/pg": "^8.11.13",
         "@types/quotesy": "^1.0.3",
+        "@types/redis": "^4.0.11",
         "drizzle-kit": "^0.31.0",
         "nodemon": "^3.1.9",
         "typescript": "^5.8.3"
