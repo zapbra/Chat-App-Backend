@@ -1,0 +1,1 @@
+ALTER TABLE "fake_table" RENAME COLUMN "name" TO "names";

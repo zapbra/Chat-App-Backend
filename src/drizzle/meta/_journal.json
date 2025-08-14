@@ -50,6 +50,13 @@
       "when": 1750742724210,
       "tag": "0006_same_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1755144544163,
+      "tag": "0007_elite_yellowjacket",
+      "breakpoints": true
     }
   ]
 }

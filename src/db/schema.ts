@@ -306,5 +306,5 @@ export const followers = table(
 
 export const fakeTable = table("fake_table", {
     id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
-    name: t.text("name"),
+    name: t.text("names"),
 });
