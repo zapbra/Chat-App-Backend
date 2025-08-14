@@ -30,7 +30,11 @@ process.on("uncaughtException", (err) => {
 async function main() {
     try {
         const { pubClient, subClient } = await connectRedis();
-
+        console.log("Connecting to server...");
+        console.log("Redis env:", {
+            port: process.env.REDIS_PORT,
+            host: process.env.REDIS_PUBLIC_ENDPOINT,
+        });
         const app = express();
         const server = createServer(app);
         initSocket(server);
