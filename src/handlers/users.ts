@@ -99,9 +99,12 @@ export const signUp: RequestHandler = async (
             return;
         }
 
+        console.log("About to crypt password");
         // Hash the password
         const hashedPassword = await bcrypt.hash(req.body.password_hash, 10);
 
+        console.log("hashed password");
+        console.log(hashedPassword);
         // Create new user
         const inserted = await db
             .insert(users)
@@ -137,6 +140,8 @@ export const signUp: RequestHandler = async (
             },
         });
     } catch (error) {
+        console.log("Failed to sign up");
+        console.log(error);
         next(new CustomError("Failed to signup", 500));
     }
 };
